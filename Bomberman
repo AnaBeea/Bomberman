@@ -7,6 +7,7 @@
 #include <time.h>
 using namespace std;
 
+// Definido os códigos para os elementos no mapa
 // 0 Empty
 // 1 Strong Wall
 // 2 Weak Wall
@@ -15,20 +16,24 @@ using namespace std;
 // 5 Bomb
 // 6 Explosion Area
 
+// Função para verificar se um local no mapa está vazio ou contém uma entidade específica
 bool is_place_empty(int pos, char entity_name) {
-    if (pos == 0 ||pos == 4 && entity_name =='b' || pos == 5 && entity_name == 'p' || pos == 2 && entity_name == 'b' || pos == 6 && entity_name == 'b' || pos == 4 && entity_name == 'p') {
+    if (pos == 0 || pos == 4 && entity_name == 'b' || pos == 5 && entity_name == 'p' || pos == 2 && entity_name == 'b' || pos == 6 && entity_name == 'b' || pos == 4 && entity_name == 'p') {
         return 1;
     }
     return 0;
 }
 
+// Estrutura que define o jogador
 struct Player {
-    int x = 0, y = 0;
-    bool alive = true;
+    int x = 0, y = 0; // Posição do jogador no mapa
+    bool alive = true; // Indica se o jogador está vivo
 
+    // Função para mostrar o jogador no mapa
     void show() {
         cout << char(2);
     }
+    // Função para mover o jogador
     void move(char direction, int map[10][20]) {
         switch (direction) {
         case 's': ///Cima
@@ -55,6 +60,7 @@ struct Player {
     }
 };
 
+// Estrutura que define a bomba
 struct Bomb {
     bool is_placed = false;
     bool is_animating = false;
@@ -62,18 +68,21 @@ struct Bomb {
     clock_t start, end;
     int explode_cd_time = 3;
 
+    // Função para configurar a bomba em uma posição específica
     void setup(int px, int py, int map[10][20]) {
         x = px;
         y = py;
         bomb_set_active();
-        map[y][x] = 5;
+        map[y][x] = 5; // Define a posição da bomba no mapa
     }
 
+    // Função para ativar a bomba
     void bomb_set_active() {
         start = clock();
         is_placed = true;
     }
 
+    // Função para modificar o mapa durante a explosão da bomba
     void modify_map(int map[10][20], int num) {
         if (is_place_empty(map[y - 1][x], 'b')) {
             map[y - 1][x] = num;
@@ -90,18 +99,21 @@ struct Bomb {
         map[y][x] = num;
     }
 
+    // Função para animar a explosão da bomba
     void bomb_animate(int map[10][20]) {
         end = clock();
         if ((end - start) / CLOCKS_PER_SEC == 1) {
-            modify_map(map, 0);
+            modify_map(map, 0); // Modifica o mapa durante a animação da explosão
             is_animating = false;
         }
     }
 
+    // Função para eliminar entidades afetadas pela explosão da bomba
     void kill_ent(int map[10][20], int e_x, int e_y) {
         map[e_y][e_x] = 0;
     }
 
+    // Função para verificar colisões durante a explosão da bomba
     void bomb_check_coll(int map[10][20], Player& player) {
         if (is_place_empty(map[y][x - 1], 'b') && map[y][x - 1] != 1) {
             kill_ent(map, x - 1, y);
@@ -132,12 +144,14 @@ struct Bomb {
         }
     }
 
+    // Função para controlar a explosão da bomba
     void bomb_explode(int map[10][20], Player& player) {
         bomb_check_coll(map, player);
         modify_map(map, 6);
         is_animating = true;
     }
 
+    // Função para controlar o tempo de explosão da bomba
     void bomb_explode_controler(int map[10][20], Player& player) {
         end = clock();
         if ((end - start) / CLOCKS_PER_SEC == explode_cd_time) {
@@ -148,6 +162,7 @@ struct Bomb {
     }
 };
 
+// Função para parar o cursor de piscar no console
 void parar_cursor_piscar() {
     HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO     cursorInfo;
@@ -156,6 +171,7 @@ void parar_cursor_piscar() {
     SetConsoleCursorInfo(out, &cursorInfo);
 }
 
+// Função para reposicionar o cursor no início do console
 void reposicionar_cursor_inicio() {
     short int CX = 0, CY = 0;
     COORD coord;
@@ -164,11 +180,13 @@ void reposicionar_cursor_inicio() {
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 }
 
+// Função para configurar o cursor
 void setup_cursor() {
     parar_cursor_piscar();
     reposicionar_cursor_inicio();
 }
 
+// Função para lidar com a entrada do jogador
 void handle_input(Player& player, int map[10][20], Bomb& bomb) {
     char keyboard_input;
     if (_kbhit()) {
@@ -182,13 +200,15 @@ void handle_input(Player& player, int map[10][20], Bomb& bomb) {
     }
 }
 
-void move_enemie(int map[10][20],int enemypos[3][2], Player& player, int pos) {
+// Função para mover um inimigo
+void move_enemie(int map[10][20], int enemypos[3][2], Player& player, int pos) {
     int y = enemypos[pos][0];
     int x = enemypos[pos][1];
     int nx = 0;
     int ny = 0;
     int r = round(((rand() % 4) + 1));
 
+    // Movimento do inimigo
     if (map[y - 1][x] != 1 && map[y - 1][x] != 2) {
         map[y][x] = 0;
         map[y - 1][x] = 4;
@@ -213,13 +233,16 @@ void move_enemie(int map[10][20],int enemypos[3][2], Player& player, int pos) {
         nx = x;
         ny = y + 1;
     }
-        
+
+    // Verifica se o inimigo colidiu com o jogador
     if (nx == player.x && ny == player.y) {
         player.alive = false;
     }
     enemypos[pos][0] = ny;
     enemypos[pos][1] = nx;
 }
+
+// Função para atualizar o mapa no console
 void att_map(int map[10][20], Player& player) {
     for (int y = 0; y < 10; y++) {
         for (int x = 0; x < 20; x++) {
@@ -248,11 +271,15 @@ void att_map(int map[10][20], Player& player) {
         cout << "\n";
     }
 }
+
+// Função para controlar o movimento dos inimigos
 void enemies_controler(int map[10][20], int enemies[3][2], Player& player) {
     for (int i = 0; i < 3; i++) {
         move_enemie(map, enemies, player, i);
     }
 }
+
+// Função para verificar o fim do jogo
 bool check_end_game(int map[10][20], Player& player) {
     bool is_end = player.alive;
     int num_of_enem = 0;
@@ -279,6 +306,8 @@ int main() {
     clock_t start, end;
     bool time = false;
     Bomb bomb;
+
+    // Configuração inicial do mapa
     int map[10][20] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                         1, 3, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1,
                         1, 2, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
@@ -290,29 +319,31 @@ int main() {
                         1, 0, 0, 0, 0, 1, 0, 0, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     start = clock();
+    // Posições iniciais dos inimigos
     int enemies[3][2] = { 6, 4,
                          8, 8,
                          3, 13 };
-        while (check_end_game(map, player)) {
-            end = clock();
-            if ((end - start) / CLOCKS_PER_SEC == 3) {
-                enemies_controler(map, enemies, player);
-                start = clock();
-            }
-            if (bomb.is_placed == true) {
-                bomb.bomb_explode_controler(map, player);
-            }
-            else if (bomb.is_animating == true) {
-                bomb.bomb_animate(map);
-            }
-            setup_cursor();
-            handle_input(player, map, bomb);
-            att_map(map, player);
-            cout << "X[" << player.x << "] ";
-            cout << "Y[" << player.y << "]";
-            cout << player.alive;
-
+    // Loop principal do jogo
+    while (check_end_game(map, player)) {
+        end = clock();
+        if ((end - start) / CLOCKS_PER_SEC == 3) {
+            enemies_controler(map, enemies, player); // Controla o movimento dos inimigos
+            start = clock();
         }
+        if (bomb.is_placed == true) {
+            bomb.bomb_explode_controler(map, player); // Controla a explosão da bomba
+        }
+        else if (bomb.is_animating == true) {
+            bomb.bomb_animate(map); // Controla a animação da explosão da bomba
+        }
+        setup_cursor(); // Configura o cursor no console
+        handle_input(player, map, bomb); // Lida com a entrada do jogador
+        att_map(map, player); // Atualiza e exibe o mapa no console
+        cout << "X[" << player.x << "] ";
+        cout << "Y[" << player.y << "]";
+        cout << player.alive; // Exibe informações sobre a posição do jogador e sua condição
+
+    }
 }
 
 
